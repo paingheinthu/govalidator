@@ -148,25 +148,25 @@ func (r *roller) traverseStruct(iface interface{}) {
 				}
 			}
 		default:
-			if len(rfv.Tag.Get(r.tagIdentifier)) > 0 {
-				tags := strings.Split(rfv.Tag.Get(r.tagIdentifier), r.tagSeparator)
-				// add if first tag is not hyphen
-				if tags[0] != "-" {
-					if v.CanInterface() {
-						r.push(tags[0], v.Interface())
-					}
+			// if len(rfv.Tag.Get(r.tagIdentifier)) > 0 {
+			// 	tags := strings.Split(rfv.Tag.Get(r.tagIdentifier), r.tagSeparator)
+			// 	// add if first tag is not hyphen
+			// 	if tags[0] != "-" {
+			// 		if v.CanInterface() {
+			// 			r.push(tags[0], v.Interface())
+			// 		}
+			// 	}
+			// } else {
+			if v.Kind() == reflect.Ptr {
+				if ifv.CanInterface() {
+					r.push(ift.Name()+"."+rfv.Name, ifv.Interface())
 				}
 			} else {
-				if v.Kind() == reflect.Ptr {
-					if ifv.CanInterface() {
-						r.push(ift.Name()+"."+rfv.Name, ifv.Interface())
-					}
-				} else {
-					if v.CanInterface() {
-						r.push(ift.Name()+"."+rfv.Name, v.Interface())
-					}
+				if v.CanInterface() {
+					r.push(ift.Name()+"."+rfv.Name, v.Interface())
 				}
 			}
+			//}
 		}
 	}
 }
