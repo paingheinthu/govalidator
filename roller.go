@@ -37,7 +37,7 @@ func (r *roller) start(iface interface{}) {
 	switch ift.Kind() {
 	case reflect.Struct:
 		if canInterface {
-			r.traverseStruct(ifv.Interface())
+			r.traverseStruct(ifv.Interface(), "")
 		}
 	case reflect.Map:
 		if ifv.Len() > 0 {
@@ -87,10 +87,9 @@ func (r *roller) push(key string, val interface{}) bool {
 }
 
 // traverseStruct through all structs and add it to root
-func (r *roller) traverseStruct(iface interface{}) {
+func (r *roller) traverseStruct(iface interface{}, mainTag string) {
 	ifv := reflect.ValueOf(iface)
 	ift := reflect.TypeOf(iface)
-
 	if ift.Kind() == reflect.Ptr {
 		ifv = ifv.Elem()
 		ift = ift.Elem()
@@ -125,7 +124,7 @@ func (r *roller) traverseStruct(iface interface{}) {
 					r.push(typeName, v.Interface())
 				default:
 					r.typeName = ift.Name()
-					r.traverseStruct(v.Interface())
+					r.traverseStruct(v.Interface(), "")
 				}
 			}
 		case reflect.Map:
@@ -136,10 +135,19 @@ func (r *roller) traverseStruct(iface interface{}) {
 			ptrReflectionVal := reflect.Indirect(v)
 			if !isEmpty(ptrReflectionVal) {
 				ptrField := ptrReflectionVal.Type()
+				var typeName string
+				if len(rfv.Tag.Get(r.tagIdentifier)) > 0 {
+					tags := strings.Split(rfv.Tag.Get(r.tagIdentifier), r.tagSeparator)
+					if tags[0] != "-" {
+						typeName = tags[0]
+					}
+				} else {
+					typeName = rfv.Name
+				}
 				switch ptrField.Kind() {
 				case reflect.Struct:
 					if v.CanInterface() {
-						r.traverseStruct(v.Interface())
+						r.traverseStruct(v.Interface(), typeName)
 					}
 				case reflect.Map:
 					if v.CanInterface() {
@@ -148,25 +156,30 @@ func (r *roller) traverseStruct(iface interface{}) {
 				}
 			}
 		default:
-			// if len(rfv.Tag.Get(r.tagIdentifier)) > 0 {
-			// 	tags := strings.Split(rfv.Tag.Get(r.tagIdentifier), r.tagSeparator)
-			// 	// add if first tag is not hyphen
-			// 	if tags[0] != "-" {
-			// 		if v.CanInterface() {
-			// 			r.push(tags[0], v.Interface())
-			// 		}
-			// 	}
-			// } else {
-			if v.Kind() == reflect.Ptr {
-				if ifv.CanInterface() {
-					r.push(ift.Name()+"."+rfv.Name, ifv.Interface())
+			if len(rfv.Tag.Get(r.tagIdentifier)) > 0 {
+				tags := strings.Split(rfv.Tag.Get(r.tagIdentifier), r.tagSeparator)
+				// add if first tag is not hyphen
+				if tags[0] != "-" {
+					if v.CanInterface() {
+						tag := tags[0]
+						if mainTag != "" {
+							tag = mainTag + "." + tag
+						}
+
+						r.push(tag, v.Interface())
+					}
 				}
 			} else {
-				if v.CanInterface() {
-					r.push(ift.Name()+"."+rfv.Name, v.Interface())
+				if v.Kind() == reflect.Ptr {
+					if ifv.CanInterface() {
+						r.push(ift.Name()+"."+rfv.Name, ifv.Interface())
+					}
+				} else {
+					if v.CanInterface() {
+						r.push(ift.Name()+"."+rfv.Name, v.Interface())
+					}
 				}
 			}
-			//}
 		}
 	}
 }
@@ -183,14 +196,14 @@ func (r *roller) traverseMap(iface interface{}) {
 			switch reflect.TypeOf(v).Kind() {
 			case reflect.Struct:
 				r.typeName = k // set the map key as name
-				r.traverseStruct(v)
+				r.traverseStruct(v, r.typeName)
 			case reflect.Map:
 				r.typeName = k // set the map key as name
 				r.traverseMap(v)
 			case reflect.Ptr: // if the field inside map is Ptr then get the type and underlying values as interface{}
 				switch reflect.TypeOf(v).Elem().Kind() {
 				case reflect.Struct:
-					r.traverseStruct(v)
+					r.traverseStruct(v, "")
 				case reflect.Map:
 					switch mapType := v.(type) {
 					case *map[string]interface{}:

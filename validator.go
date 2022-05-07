@@ -27,6 +27,7 @@ type (
 		Rules           MapData // Rules represents rules for form-data/x-url-encoded/query params data
 		Messages        MapData // Messages represents custom/localize message for rules
 		TagIdentifier   string  // TagIdentifier represents struct tag identifier, e.g: json or validate etc
+		TagSeparator    string  // TagSeparator represents struct tag separator, eg: | or ,
 		FormSize        int64   //Form represents the multipart forom data max memory size in bytes
 	}
 
@@ -184,7 +185,11 @@ func (v *Validator) internalValidateStruct() url.Values {
 	if v.Opts.TagIdentifier != "" {
 		r.setTagIdentifier(v.Opts.TagIdentifier)
 	}
+
 	r.setTagSeparator(tagSeparator)
+	if v.Opts.TagSeparator != "" {
+		r.setTagSeparator(v.Opts.TagSeparator)
+	}
 	r.start(v.Opts.Data)
 
 	//clean if the key is not exist or value is empty or zero value
